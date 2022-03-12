@@ -6,6 +6,8 @@ from dotmap import DotMap
 from pathlib import Path
 from tensorboardX import SummaryWriter
 
+import envs
+import envs.gymmb
 from algos.td3 import TD3
 from components.arguments import common_args, policy_function, value_function
 from components.env_loop import EnvLoop
