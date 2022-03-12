@@ -45,15 +45,21 @@ class TD3(nn.Module):
         self.policy_noise = policy_noise
         self.noise_clip = noise_clip
         self.expl_noise = expl_noise
+        self.normalizer = None
         self.value_loss = value_loss
         self.grad_clip = grad_clip
         self.device = device
 
         self.step_counter = 0
 
+    def setup_normalizer(self, normalizer):
+        self.normalizer = copy.deepcopy(normalizer)
+
     def get_action(self, states, deterministic=False):
         states = states.to(self.device)
         with th.no_grad():
+            if self.normalizer is not None:
+                states = self.normalizer.normalize_states(states)
             actions = self.actor(states)
             if not deterministic:
                 actions += th.randn_like(actions) * self.expl_noise
@@ -66,6 +72,9 @@ class TD3(nn.Module):
             return self.critic(states, actions)[0]
 
     def update(self, states, actions, rewards, next_states, masks):
+        if self.normalizer is not None:
+            states = self.normalizer.normalize_states(states)
+            next_states = self.normalizer.normalize_states(next_states)
         self.step_counter += 1
 
         noise = (

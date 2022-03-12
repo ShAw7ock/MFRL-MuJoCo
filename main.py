@@ -12,6 +12,7 @@ from algos.td3 import TD3
 from components.arguments import common_args, policy_function, value_function
 from components.env_loop import EnvLoop
 from components.buffer import Buffer
+from components.normalizer import TransitionNormalizer
 from utils.wrappers import BoundedActionsEnv, IsDoneEnv, MuJoCoCloseFixWrapper, RecordedEnv
 from utils.misc import to_np, EpisodeStats
 
@@ -69,7 +70,10 @@ class MainLoopTraining:
 
         self.logger = logger
         self.env_loop = EnvLoop(get_env, env_name=args.env_name, render=args.render)
+        # Buffer and Normalizer
         self.buffer = Buffer(self.d_state, self.d_action, args.n_total_steps)
+        if args.normalize_data:
+            self.buffer.setup_normalizer(TransitionNormalizer(self.d_state, self.d_action, self.device))
         self.agent = TD3(
             d_state=self.d_state, d_action=self.d_action, device=self.device, gamma=args.gamma, tau=args.tau,
             policy_lr=args.policy_lr, value_lr=args.value_lr,
@@ -141,6 +145,7 @@ class MainLoopTraining:
 
         # Training agent
         if self.step_i >= self.args.n_warm_up_steps and self.step_i % self.args.learning_freq == 0:
+            self.agent.setup_normalizer(self.buffer.normalizer)
             for _ in range(self.args.n_policy_update_iters):
                 states, actions, next_states, rewards = self.buffer.sample(self.args.batch_size, self.device)
                 dones = self.is_done(next_states)

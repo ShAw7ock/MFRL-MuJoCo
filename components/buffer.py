@@ -24,8 +24,12 @@ class Buffer:
         self.rewards = torch.zeros(size, 1).float()
 
         # Other attributes
+        self.normalizer = None
         self.ptr = 0
         self.is_full = False
+
+    def setup_normalizer(self, normalizer):
+        self.normalizer = normalizer
 
     def _add(self, buffer, arr):
         n = arr.size(0)
@@ -63,6 +67,10 @@ class Buffer:
 
         self.ptr = (self.ptr + n_transitions) % self.size
 
+        if self.normalizer is not None:
+            for s, a, ns, r in zip(states, actions, state_deltas, rewards):
+                self.normalizer.add(s, a, ns, r)
+
     def view(self):
         n = len(self)
 
@@ -73,21 +81,22 @@ class Buffer:
 
         return s, a, ns, s_delta
 
-    def train_batches(self, batch_size, device):
+    def train_batches(self, ensemble_size, batch_size):
         """
-        This function will view all the data in the buffer.
+        return an iterator of batches
 
         Args:
             batch_size: number of samples to be returned
-            device: th.device
+            ensemble_size: size of the ensemble
 
         Returns:
-            state of size (n_samples, d_state)
-            action of size (n_samples, d_action)
-            next state of size (n_samples, d_state)
+            state of size (ensemble_size, n_samples, d_state)
+            action of size (ensemble_size, n_samples, d_action)
+            next state of size (ensemble_size, n_samples, d_state)
         """
         num = len(self)
-        indices = np.random.permutation(range(num))
+        indices = [np.random.permutation(range(num)) for _ in range(ensemble_size)]
+        indices = np.stack(indices)
 
         for i in range(0, num, batch_size):
             j = min(num, i + batch_size)
@@ -98,20 +107,18 @@ class Buffer:
 
             batch_size = j - i
 
-            batch_indices = indices[i:j]
+            batch_indices = indices[:, i:j]
             batch_indices = batch_indices.flatten()
 
             states = self.states[batch_indices]
             actions = self.actions[batch_indices]
             state_deltas = self.state_deltas[batch_indices]
-            rewards = self.rewards[batch_indices]
 
-            states = states.reshape(batch_size, self.d_state).to(device)
-            actions = actions.reshape(batch_size, self.d_action).to(device)
-            state_deltas = state_deltas.reshape(batch_size, self.d_state).to(device)
-            rewards = rewards.reshape(batch_size, 1).to(device)
+            states = states.reshape(ensemble_size, batch_size, self.d_state)
+            actions = actions.reshape(ensemble_size, batch_size, self.d_action)
+            state_deltas = state_deltas.reshape(ensemble_size, batch_size, self.d_state)
 
-            yield states, actions, states + state_deltas, rewards
+            yield states, actions, state_deltas
 
     def sample(self, batch_size, device):
         """

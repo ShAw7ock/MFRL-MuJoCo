@@ -6,6 +6,7 @@ def common_args():
     parser.add_argument("--env_name", default="GYMMB_HalfCheetah-v2", type=str, help="environment name: GYMMB_* or Magellan*")
     parser.add_argument("--task_name", default="standard", type=str, help="assert standard")
     parser.add_argument("--seed", default=1, type=int, help="random seed")
+    parser.add_argument("--normalize_data", default=False, type=bool, help="whether to normalize the data for training")
     parser.add_argument("--n_training_threads", default=None, type=int, help="while not GPU, set CPU threads")
     parser.add_argument("--n_total_steps", default=50000, type=int, help="total number of steps in real environment (including warm up)")
     parser.add_argument("--n_warm_up_steps", default=1000, type=int, help="number of steps to initialized the buffer")
