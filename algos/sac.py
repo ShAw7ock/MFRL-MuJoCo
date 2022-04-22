@@ -69,12 +69,14 @@ class SAC(nn.Module):
             states = self.normalizer.normalize_states(states)
             next_states = self.normalizer.normalize_states(next_states)
         self.step_counter += 1
+        # TODO: Automatic Entropy Tuning
         alpha = 1
 
         # Critic Update
         next_actions, new_log_pi = self.actor.sample(next_states)
+        new_log_pi = new_log_pi.unsqueeze(-1)
         next_Q1, next_Q2 = self.critic_target(next_states, next_actions)
-        next_Q = th.min(next_Q1, next_Q2)
+        next_Q = th.min(next_Q1, next_Q2) - alpha * new_log_pi
         q_target = rewards + self.gamma * masks.float().unsqueeze(1) * next_Q
         zero_targets = th.zeros_like(q_target, device=self.device)
 
