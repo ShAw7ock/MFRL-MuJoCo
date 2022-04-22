@@ -1,9 +1,8 @@
-RL Algos for MuJoCo
+Model-Free Reinforcment Learning (MFRL)
 ============================
 
-# MUJOCO-py
-* Implementation for Reinforcement Learning algorithms in `MuJoCo` environment.
-* We use the `PyTorch` as the backend.
+# NOTE
+* Implementation for MFRL in `MuJoCo` environment using `PyTorch` as backend.
 * Run the experiments as:
 
 `python main.py --env_name ENV_NAME --algo ALGO_NAME --use_cuda True`
