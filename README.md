@@ -1,7 +1,7 @@
 Model-Free Reinforcment Learning (MFRL)
 ============================
 
-# NOTE
+## NOTE
 * Implementation for MFRL in `MuJoCo` environment using `PyTorch` as backend.
 * Run the experiments as:
 
@@ -11,17 +11,17 @@ Model-Free Reinforcment Learning (MFRL)
 * Supported RL algorithms `ALGO_NAME` can be seen in: `./algos/__init__.py`
 * Modify the Hyper-parameters in: `./components/arguments.py`
 
-# Requirements
+## Requirements
 * Python >= 3.6.0 (optional)
 * PyTorch == 1.7.0 (optional)
 * [MUJOCO 200](https://roboti.us/)
 * [mujoco-py](https://github.com/openai/mujoco-py)
 * OpenAI Gym
 
-# TODO List
+## TODO List
 - [x] CUDA Supported
 - [x] Off-policy Algos: TD3, DDPG, SAC
 - [ ] On-policy Algos: PPO
 
-# Acknowledgement
+## Acknowledgement
 This code is referenced by [nnaisense/MAGE](https://github.com/nnaisense/MAGE).
