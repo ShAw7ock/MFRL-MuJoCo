@@ -3,7 +3,7 @@ import torch
 
 import gym
 from packaging import version
-from misc import to_torch
+from utils.misc import to_torch
 
 if version.parse(gym.__version__) > version.parse("0.9.4"):
     from gym.wrappers.monitoring.video_recorder import VideoRecorder

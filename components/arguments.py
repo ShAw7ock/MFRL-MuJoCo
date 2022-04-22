@@ -3,7 +3,10 @@ import argparse
 
 def common_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env_name", default="GYMMB_HalfCheetah-v2", type=str, help="environment name: GYMMB_* or Magellan*")
+    parser.add_argument("--env_name", required=True, type=str,
+                        help="environment name: GYMMB_* ")
+    parser.add_argument("--algo", required=True, type=str,
+                        help="ALGO_NAME, i.e. td3,ddpg,sac...")
     parser.add_argument("--task_name", default="standard", type=str, help="assert standard")
     parser.add_argument("--seed", default=1, type=int, help="random seed")
     parser.add_argument("--normalize_data", default=False, type=bool, help="whether to normalize the data for training")
@@ -27,7 +30,7 @@ def common_args():
 def policy_function(args):
     args.policy_n_layers = 2            # number of hidden layers (>=1)
     args.policy_n_units = 384           # number of units in each hidden layer
-    args.policy_activation = 'swish'
+    args.policy_activation = 'leaky_relu'
     args.policy_lr = 1e-4               # learning rate
     # Parameters for TD3
     args.policy_delay = 2
@@ -41,7 +44,7 @@ def policy_function(args):
 def value_function(args):
     args.value_n_layers = 2             # number of hidden layers (>=1)
     args.value_n_units = 384            # number of units in each hidden layer
-    args.value_activation = 'swish'
+    args.value_activation = 'leaky_relu'
     args.value_lr = 1e-4
     args.value_loss = 'mse'             # 'huber' or 'mse'
     return args

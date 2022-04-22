@@ -1,7 +1,10 @@
 import torch as th
 import torch.nn as nn
+from torch.distributions import Normal
 
 
+LOG_SIG_MAX = 2
+LOG_SIG_MIN = -20
 def linear(x):
     return x
 
@@ -93,18 +96,33 @@ class Actor(nn.Module):
         return th.tanh(self.layers(state))
 
 
-class EpisodicMemory(nn.Module):
+class GaussianActor(nn.Module):
     def __init__(self, d_state, d_action, n_layers, n_units, activation):
-        super().__init__()
-        assert n_layers >= 1, "# of hidden layers"
+        super(GaussianActor, self).__init__()
 
-        layers = [nn.Linear(d_state + d_action, n_units), get_activation(activation)]
-        for lyr_idx in range(1, n_layers):
+        layers = [nn.Linear(d_state, n_units), get_activation(activation)]
+        for _ in range(1, n_layers):
             layers += [nn.Linear(n_units, n_units), get_activation(activation)]
-        layers += [nn.Linear(n_units, 1)]
+        # layers += [nn.Linear(n_units, d_action)]
+
+        [init_weights(layer) for layer in layers if isinstance(layer, nn.Linear)]
 
         self.layers = nn.Sequential(*layers)
+        self.mean_linear = nn.Linear(n_units, d_action)
+        self.log_std_linear = nn.Linear(n_units, d_action)
 
-    def forward(self, state, action):
-        x = th.cat([state, action], dim=1)
-        return self.layers(x)
+    def forward(self, state):
+        x = self.layers(state)
+        mean = self.mean_linear(x)
+        log_std = self.log_std_linear(x)
+        log_std = th.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+        return mean, log_std
+
+    def sample(self, state):
+        mean, log_std = self.forward(state)
+        std = log_std.exp()
+        normal = Normal(mean, std)
+        x_t = normal.rsample()
+        action = th.tanh(x_t)
+        log_prob = normal.log_prob(x_t)
+        return action, log_prob

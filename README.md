@@ -1,10 +1,16 @@
-RL Algos for MUJOCO
+RL Algos for MuJoCo
 ============================
 
 # MUJOCO-py
-Implementation for Reinforcement Learning algorithms in `MUJOCO` environment. <br>
-We use the `PyTorch` as the backend. <br>
-Note that we bound the continuous action space into `(-1, 1)` which you can see the details [here](https://github.com/ShAw7ock/mujoco_rl/blob/master/utils/wrappers.py). <br>
+* Implementation for Reinforcement Learning algorithms in `MuJoCo` environment.
+* We use the `PyTorch` as the backend.
+* Run the experiments as:
+
+`python main.py --env_name ENV_NAME --algo ALGO_NAME --use_cuda True`
+
+* We bound the continuous action space into `[-1, 1]` which can be seen in: `./utils/wrappers.py` and the supported `ENV_NAME` can be seen in: `./envs/gymmb/__init__.py`.
+* Supported RL algorithms `ALGO_NAME` can be seen in: `./algos/__init__.py`
+* Modify the Hyper-parameters in: `./components/arguments.py`
 
 # Requirements
 * Python >= 3.6.0 (optional)
@@ -15,8 +21,8 @@ Note that we bound the continuous action space into `(-1, 1)` which you can see 
 
 # TODO List
 - [x] CUDA Supported
-- [ ] Off-policy Algos: TD3, DDPG, SAC
+- [x] Off-policy Algos: TD3, DDPG, SAC
 - [ ] On-policy Algos: PPO
 
 # Acknowledgement
-This code is referenced by [nnaisense/MAGE](https://github.com/nnaisense/MAGE). <br>
+This code is referenced by [nnaisense/MAGE](https://github.com/nnaisense/MAGE).

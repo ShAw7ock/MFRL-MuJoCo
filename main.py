@@ -8,7 +8,7 @@ from tensorboardX import SummaryWriter
 
 import envs
 import envs.gymmb
-from algos.td3 import TD3
+from algos import TD3, SAC, DDPG
 from components.arguments import common_args, policy_function, value_function
 from components.env_loop import EnvLoop
 from components.buffer import Buffer
@@ -74,15 +74,38 @@ class MainLoopTraining:
         self.buffer = Buffer(self.d_state, self.d_action, args.n_total_steps)
         if args.normalize_data:
             self.buffer.setup_normalizer(TransitionNormalizer(self.d_state, self.d_action, self.device))
-        self.agent = TD3(
-            d_state=self.d_state, d_action=self.d_action, device=self.device, gamma=args.gamma, tau=args.tau,
-            policy_lr=args.policy_lr, value_lr=args.value_lr,
-            value_loss=args.value_loss, value_n_layers=args.value_n_layers, value_n_units=args.value_n_units,
-            value_activation=args.value_activation,
-            policy_n_layers=args.policy_n_layers, policy_n_units=args.policy_n_units,
-            policy_activation=args.policy_activation, grad_clip=args.grad_clip, policy_delay=args.policy_delay,
-            expl_noise=args.td3_expl_noise
-        )
+
+        if args.algo == 'td3':
+            self.agent = TD3(
+                d_state=self.d_state, d_action=self.d_action, device=self.device, gamma=args.gamma, tau=args.tau,
+                policy_lr=args.policy_lr, value_lr=args.value_lr,
+                value_loss=args.value_loss, value_n_layers=args.value_n_layers, value_n_units=args.value_n_units,
+                value_activation=args.value_activation,
+                policy_n_layers=args.policy_n_layers, policy_n_units=args.policy_n_units,
+                policy_activation=args.policy_activation, grad_clip=args.grad_clip, policy_delay=args.policy_delay,
+                expl_noise=args.td3_expl_noise
+            )
+        elif args.algo == 'ddpg':
+            self.agent = DDPG(
+                d_state=self.d_state, d_action=self.d_action, device=self.device, gamma=args.gamma, tau=args.tau,
+                policy_lr=args.policy_lr, value_lr=args.value_lr,
+                value_loss=args.value_loss, value_n_layers=args.value_n_layers, value_n_units=args.value_n_units,
+                value_activation=args.value_activation,
+                policy_n_layers=args.policy_n_layers, policy_n_units=args.policy_n_units,
+                policy_activation=args.policy_activation, grad_clip=args.grad_clip, expl_noise=args.td3_expl_noise
+            )
+        elif args.algo == 'sac':
+            self.agent = SAC(
+                d_state=self.d_state, d_action=self.d_action, device=self.device, gamma=args.gamma, tau=args.tau,
+                policy_lr=args.policy_lr, value_lr=args.value_lr,
+                value_loss=args.value_loss, value_n_layers=args.value_n_layers, value_n_units=args.value_n_units,
+                value_activation=args.value_activation,
+                policy_n_layers=args.policy_n_layers, policy_n_units=args.policy_n_units,
+                policy_activation=args.policy_activation, grad_clip=args.grad_clip, policy_delay=args.policy_delay,
+                expl_noise=args.td3_expl_noise
+            )
+        else:
+            raise ValueError(f"Unknown Algorithm {args.algo} ...")
         # TODO: stats store the ep_returns and ep_lengths
         self.stats = EpisodeStats(self.eval_tasks)
         self.last_avg_eval_score = None

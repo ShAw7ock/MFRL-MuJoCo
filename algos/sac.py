@@ -4,11 +4,11 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
-from components.models import Actor, ActionValueFunction
+from components.models import GaussianActor, ActionValueFunction
 from utils.radam import RAdam
 
 
-class TD3(nn.Module):
+class SAC(nn.Module):
     def __init__(
             self,
             d_state,
@@ -31,14 +31,13 @@ class TD3(nn.Module):
             noise_clip=0.5,
             expl_noise=0.1,
     ):
-        super(TD3, self).__init__()
-        self.actor = Actor(d_state, d_action, policy_n_layers, policy_n_units, policy_activation).to(device)
-        self.actor_target = copy.deepcopy(self.actor)
-        self.actor_optimizer = RAdam(self.actor.parameters(), lr=policy_lr)
+        super(SAC, self).__init__()
+        self.actor = GaussianActor(d_state, d_action, policy_n_layers, policy_n_units, policy_activation).to(device)
+        self.actor_optimizer = Adam(self.actor.parameters(), lr=policy_lr)
 
         self.critic = ActionValueFunction(d_state, d_action, value_n_layers, value_n_units, value_activation).to(device)
         self.critic_target = copy.deepcopy(self.critic)
-        self.critic_optimizer = RAdam(self.critic.parameters(), lr=value_lr)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=value_lr)
 
         self.gamma = gamma
         self.tau = tau
@@ -61,30 +60,19 @@ class TD3(nn.Module):
         with th.no_grad():
             if self.normalizer is not None:
                 states = self.normalizer.normalize_states(states)
-            actions = self.actor(states)
-            if not deterministic:
-                actions += th.randn_like(actions) * self.expl_noise
-            return actions.clamp(-1, +1)
+            actions, _, = self.actor.sample(states)
 
-    def get_action_value(self, states, actions):
-        with th.no_grad():
-            states = states.to(self.device)
-            actions = actions.to(self.device)
-            return self.critic(states, actions)[0]
+        return actions
 
     def update(self, states, actions, rewards, next_states, masks):
         if self.normalizer is not None:
             states = self.normalizer.normalize_states(states)
             next_states = self.normalizer.normalize_states(next_states)
         self.step_counter += 1
+        alpha = 1
 
-        noise = (
-            th.randn_like(actions) * self.policy_noise
-        ).clamp(-self.noise_clip, self.noise_clip)
-        raw_next_actions = self.actor_target(next_states)
-        next_actions = (raw_next_actions + noise).clamp(-1, 1)
-
-        # Compute the target Q value
+        # Critic Update
+        next_actions, new_log_pi = self.actor.sample(next_states)
         next_Q1, next_Q2 = self.critic_target(next_states, next_actions)
         next_Q = th.min(next_Q1, next_Q2)
         q_target = rewards + self.gamma * masks.float().unsqueeze(1) * next_Q
@@ -97,34 +85,31 @@ class TD3(nn.Module):
         critic_loss = th.tensor(0, device=self.device)
         # Compute standard critic loss
         if self.value_loss == 'huber':
-            standard_loss = 0.5 * (F.smooth_l1_loss(q1_td_error, zero_targets) + F.smooth_l1_loss(q2_td_error, zero_targets))
+            standard_loss = 0.5 * (
+                        F.smooth_l1_loss(q1_td_error, zero_targets) + F.smooth_l1_loss(q2_td_error, zero_targets))
         elif self.value_loss == 'mse':
             standard_loss = 0.5 * (F.mse_loss(q1_td_error, zero_targets) + F.mse_loss(q2_td_error, zero_targets))
         else:
             raise ValueError(f"Unknown loss function {self.value_loss}")
         critic_loss = critic_loss + standard_loss
-
-        # Optimize the critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         th.nn.utils.clip_grad_value_(self.critic.parameters(), self.grad_clip)
         self.critic_optimizer.step()
 
+        # Actor Update
         if self.step_counter % self.policy_delay == 0:
             # Compute actor loss
-            q1, q2 = self.critic(states, self.actor(states))  # originally in TD3 we had here q1 only
+            new_actions, log_pi = self.actor.sample(states)
+            q1, q2 = self.critic(states, new_actions)  # originally in TD3 we had here q1 only
             q_min = th.min(q1, q2)
-            actor_loss = -q_min.mean()
+            actor_loss = (alpha * log_pi - q_min).mean()
 
             # Optimize the actor
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
             th.nn.utils.clip_grad_value_(self.actor.parameters(), self.grad_clip)
             self.actor_optimizer.step()
-
-            # Update the frozen target policy
-            for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
         # Update the frozen target value function
         for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
@@ -148,4 +133,3 @@ class TD3(nn.Module):
         self.actor_optimizer.load_state_dict(param_dict["actor_optimizer"])
         # Copy the eval networks to target networks
         self.critic_target = copy.deepcopy(self.critic)
-        self.actor_target = copy.deepcopy(self.actor)
