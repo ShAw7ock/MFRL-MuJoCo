@@ -74,7 +74,6 @@ class SAC(nn.Module):
 
         # Critic Update
         next_actions, new_log_pi = self.actor.sample(next_states)
-        new_log_pi = new_log_pi.unsqueeze(-1)
         next_Q1, next_Q2 = self.critic_target(next_states, next_actions)
         next_Q = th.min(next_Q1, next_Q2) - alpha * new_log_pi
         q_target = rewards + self.gamma * masks.float().unsqueeze(1) * next_Q
