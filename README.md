@@ -14,9 +14,9 @@ Model-Free Reinforcment Learning (MFRL)
 ## Requirements
 * Python >= 3.6.0 (optional)
 * PyTorch == 1.7.0 (optional)
-* [MUJOCO 200](https://roboti.us/)
-* [mujoco-py](https://github.com/openai/mujoco-py)
-* OpenAI Gym
+* [MuJoCo 200](https://roboti.us/)
+* [mujoco-py](https://github.com/openai/mujoco-py) == 2.0.2.8
+* OpenAI Gym == 0.17.0
 
 ## TODO List
 - [x] CUDA Supported
